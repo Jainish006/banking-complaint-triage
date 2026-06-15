@@ -331,7 +331,7 @@ def _call_groq_api(text, api_key):
     
     # Using llama-3.3-70b-versatile for high quality and speed on Groq
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {
                 "role": "system",
@@ -358,7 +358,7 @@ def _call_groq_api(text, api_key):
     }
     
     # 5-second timeout to handle potential API hangs/timeouts
-    response = requests.post(url, headers=headers, json=payload, timeout=5)
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
     
     if response.status_code == 200:
         res_json = response.json()
@@ -398,11 +398,23 @@ def predict_urgency_groq(text, return_source=False):
         return cleaned_response
             
     except Exception as e:
-        logger.error(f"Groq API call failed: {e}. Falling back to keyword urgency.")
-        fallback_val = urgency_level(text)
-        if return_source:
-            return fallback_val, "🛡 Keyword Fallback"
-        return fallback_val
+    logger.exception("Single Triage Groq failed")
+    logger.error(f"Groq exception: {str(e)}")
+
+    try:
+        import streamlit as st
+        st.error(f"Groq Error: {e}")
+    except:
+        pass
+
+    fallback_val = urgency_level(text)
+
+    if return_source:
+        logger.info(f"Urgency result: {fallback_val}")
+        logger.info("Source: 🛡 Keyword Fallback")
+        return fallback_val, "🛡 Keyword Fallback"
+
+    return fallback_val
 
 
 

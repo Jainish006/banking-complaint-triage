@@ -54,3 +54,27 @@
 2026-06-16 01:00:33,317 - urgency - INFO - Groq API success: predicted 'High' urgency.
 2026-06-16 01:05:29,479 - urgency - INFO - Groq API success: predicted 'High' urgency.
 2026-06-16 01:06:01,189 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 01:40:49,529 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:40:49,529 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 01:40:49,530 - urgency - INFO - Urgency result: Critical
+2026-06-16 01:40:49,611 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:40:49,612 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:40:49,612 - urgency - INFO - Urgency result: High
+2026-06-16 01:43:24,905 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:43:24,905 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 01:43:24,906 - urgency - INFO - Urgency result: Critical
+2026-06-16 01:43:24,908 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:43:24,908 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:43:24,908 - urgency - INFO - Urgency result: High
+2026-06-16 01:43:50,619 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:43:51,000 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 01:43:51,000 - urgency - INFO - Urgency result: Critical
+2026-06-16 01:43:57,935 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:43:58,410 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 01:43:58,410 - urgency - INFO - Urgency result: Critical
+2026-06-16 01:46:58,683 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:46:59,210 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:46:59,215 - urgency - INFO - Urgency result: High
+2026-06-16 01:47:02,259 - urgency - INFO - Entering Groq urgency prediction
+2026-06-16 01:47:02,783 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 01:47:02,783 - urgency - INFO - Urgency result: Critical
