@@ -10,7 +10,8 @@ import random
 # Attempt to import the real predictor, otherwise use a mock for testing
 try:
     from predictor import analyze_complaint
-except ImportError:
+except ImportError as e:
+    st.error(f"Failed to load ML models: {e}")
     def analyze_complaint(text, **kwargs):
         """Mock predictor for demonstration purposes."""
         time.sleep(0.5)  # Simulate API/Model latency
