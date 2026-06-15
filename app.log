@@ -1,0 +1,56 @@
+2026-06-16 00:11:40,745 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:11:41,801 - urgency - ERROR - Groq API call failed: Connection timed out. Falling back to keyword urgency.
+2026-06-16 00:11:41,801 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:11:41,803 - urgency - WARNING - Groq API returned invalid value: 'InvalidUrgencyLevelExplanation'. Falling back to keyword urgency.
+2026-06-16 00:11:41,804 - urgency - WARNING - Groq API returned invalid value: 'InvalidUrgencyLevelExplanation'. Falling back to keyword urgency.
+2026-06-16 00:11:59,207 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:12:00,627 - urgency - ERROR - Groq API call failed: Connection timed out. Falling back to keyword urgency.
+2026-06-16 00:12:00,633 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:12:00,634 - urgency - ERROR - Groq API call failed: Invalid urgency level response: 'InvalidUrgencyLevelExplanation'. Falling back to keyword urgency.
+2026-06-16 00:12:00,635 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:20:52,234 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:21:40,474 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:21:50,095 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:21:57,747 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:22:32,674 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:22:50,334 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:23:04,547 - urgency - INFO - Groq API success: predicted 'Low' urgency.
+2026-06-16 00:23:45,375 - urgency - ERROR - Groq API call failed: HTTP error 401: {"error":{"message":"Invalid API Key","type":"invalid_request_error","code":"invalid_api_key"}}
+. Falling back to keyword urgency.
+2026-06-16 00:24:16,734 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:17,164 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:24:17,738 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:19,045 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:24:19,591 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:20,016 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:24:20,605 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:20,984 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:24:21,408 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:24:22,141 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:22,644 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:24:23,152 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:24:23,700 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:24:24,728 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:24:25,230 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:32:04,957 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:32:04,958 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:35:13,048 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:35:25,773 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:35:36,514 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:35:45,842 - urgency - INFO - Groq API success: predicted 'Low' urgency.
+2026-06-16 00:42:35,621 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:42:35,623 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:46:47,544 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 00:46:47,545 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:53:41,932 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:55:48,974 - urgency - INFO - Groq API success: predicted 'Critical' urgency.
+2026-06-16 00:56:39,815 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:56:41,370 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:56:49,951 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:58:23,388 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 00:58:54,543 - urgency - INFO - Groq API success: predicted 'Medium' urgency.
+2026-06-16 00:59:04,950 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:00:33,315 - urgency - WARNING - Groq API key is missing. Falling back to keyword urgency.
+2026-06-16 01:00:33,317 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:05:29,479 - urgency - INFO - Groq API success: predicted 'High' urgency.
+2026-06-16 01:06:01,189 - urgency - INFO - Groq API success: predicted 'Critical' urgency.

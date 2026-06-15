@@ -36,13 +36,13 @@ st.set_page_config(
 # ------------------------
 # Sample Complaints Library
 # ------------------------
-CRITICAL_SAMPLE = """My online banking account was accessed yesterday by an unauthorized person who changed my password. They initiated two wire transfers totaling $4,500 to an unknown account. I contacted customer service immediately, but the funds have already left my account. This is my entire savings, and I need immediate assistance to reverse these transactions and secure my account."""
+CRITICAL_SAMPLE = """My online banking account was hacked and multiple unauthorized transfers were made from my savings account. I can no longer access my account and additional transactions are still occurring."""
 
-HIGH_SAMPLE = """I have been disputing an unauthorized charge of $350 on my credit card for the past 3 weeks. The bank keeps closing my dispute without investigation and my credit score has dropped 40 points as a result. I have called 5 times and nobody is helping me resolve this."""
+HIGH_SAMPLE = """I noticed a charge on my credit card that I do not recognize and submitted a dispute last week. I have contacted customer service twice but have not yet received an update on the investigation. I would like the transaction reviewed and the dispute process expedited."""
 
-MEDIUM_SAMPLE = """I was charged a $35 late fee on my credit card invoice dated June 1st. However, I made my payment on May 30th, which is two days before the due date. The transaction history clearly shows the payment was processed on time. I request that this late fee be reversed as it was an error on the bank's side."""
+MEDIUM_SAMPLE = """I was charged a late fee on my credit card statement even though I submitted my payment before the due date. I would like the charge reviewed and corrected."""
 
-LOW_SAMPLE = """Could you please provide information on how I can request paper statements for the past calendar year for my savings account? I am preparing my tax returns and need the physical documents. Please let know if there are any associated fees for printing and mailing these statements."""
+LOW_SAMPLE = """Could you provide information on how I can obtain paper statements for the previous calendar year for my checking account?"""
 
 # ------------------------
 # Session State Initialization
@@ -368,38 +368,26 @@ def urgency_card(urgency):
 
 def confidence_card(confidence):
     confidence_value = safe_float(confidence)
+    tooltip_html = ' <span title="Confidence measures how certain the model is about the prediction." style="cursor:help; font-size:11px;">ℹ️</span>'
+    label_text = f"Model Confidence{tooltip_html}"
     if confidence_value is None:
-        return styled_card("Model Confidence", "N/A", "#888", subtitle="Model confidence unavailable.")
+        return styled_card(label_text, "N/A", "#888", subtitle="Model confidence unavailable.")
 
     pct = max(0.0, min(confidence_value * 100, 100.0))
     color = "#4CAF50" if pct >= 70 else "#FF9800" if pct >= 50 else "#F44336"
     flag = " ⚠️ Low Confidence" if pct < 70 else ""
-    return styled_card("Model Confidence", f"{pct:.1f}%", color, flag=flag)
+    return styled_card(label_text, f"{pct:.1f}%", color, flag=flag)
 
 def get_word_count(text):
     return len(re.findall(r"\b\w+\b", str(text or "")))
-
-def get_length_reliability_score(text):
-    word_count = get_word_count(text)
-    if word_count == 0:
-        return 0, word_count
-    if word_count < 6:
-        return 35, word_count
-    if word_count < 12:
-        return 55, word_count
-    if word_count < 25:
-        return 80, word_count
-    if word_count < 60:
-        return 92, word_count
-    return 100, word_count
 
 def get_reliability_level(reliability_score):
     score = normalize_reliability_score(reliability_score)
     if score is None:
         return "Unknown Reliability"
-    if score >= 85:
+    if score >= 90:
         return "High Reliability"
-    if score >= 60:
+    if score >= 70:
         return "Moderate Reliability"
     return "Low Reliability"
 
@@ -419,44 +407,52 @@ def normalize_reliability_score(reliability_score):
     return max(0.0, min(score, 100.0))
 
 def get_reliability_description(reliability_level, confidence, word_count):
-    description_map = {
-        "High Reliability": "Prediction is well supported by model confidence and sufficient complaint detail.",
-        "Moderate Reliability": "Prediction is usable, but review is recommended because confidence or context is limited.",
-        "Low Reliability": "Prediction may be unstable due to limited context or weak model confidence.",
-        "Unknown Reliability": "Reliability assessment unavailable because the model output is incomplete."
-    }
-
-    description = description_map.get(reliability_level, "Reliability assessment unavailable.")
     confidence_value = safe_float(confidence)
-
-    if word_count < 6:
-        description += " Complaint is very short, so context is limited."
-    elif word_count < 12:
-        description += " Complaint length is limited, which can reduce stability."
-
-    if confidence_value is None:
-        description += " Model confidence is unavailable."
-    elif confidence_value < 0.60:
-        description += " Model confidence is low."
-
-    return description
+    
+    if reliability_level == "Unknown Reliability":
+        return "Reliability assessment unavailable because the model output is incomplete."
+        
+    if reliability_level == "High Reliability":
+        if confidence_value is not None and confidence_value >= 0.80:
+            return "Strong model confidence and clear complaint narrative."
+        return "High prediction reliability backed by sufficient complaint details."
+        
+    if reliability_level == "Moderate Reliability":
+        if confidence_value is not None and confidence_value < 0.80:
+            return "Moderate confidence. Additional review may improve accuracy."
+        return "Prediction is usable, but additional review is recommended."
+        
+    # Low Reliability
+    if word_count < 10:
+        return "Limited complaint details reduce prediction certainty."
+    if confidence_value is not None and confidence_value < 0.60:
+        return "Low model confidence reduces prediction certainty."
+    return "Limited complaint details reduce prediction certainty."
 
 def calculate_reliability_score(confidence, complaint_text):
     confidence_value = safe_float(confidence)
-    length_score, word_count = get_length_reliability_score(complaint_text)
+    word_count = get_word_count(complaint_text)
+
+    # Rebalanced logic with more gradual length penalties
+    if word_count < 5:
+        length_penalty = 20
+    elif word_count < 10:
+        length_penalty = 10
+    elif word_count < 20:
+        length_penalty = 5
+    else:
+        length_penalty = 0
+
+    length_score = 100 - length_penalty
 
     if confidence_value is None and word_count == 0:
         return None, word_count
 
     if confidence_value is None:
-        reliability_score = max(0, length_score - 15)
+        reliability_score = max(0, length_score - 30)
     else:
-        reliability_score = round((confidence_value * 100 * 0.7) + (length_score * 0.3))
-
-    if word_count < 6:
-        reliability_score -= 10
-    elif word_count < 12:
-        reliability_score -= 5
+        # Confidence weight is 0.60, length score weight is 0.40
+        reliability_score = round((confidence_value * 100 * 0.60) + (length_score * 0.40))
 
     return max(0, min(reliability_score, 100)), word_count
 
@@ -481,7 +477,10 @@ def render_reliability_card(confidence, complaint_text):
     return f"""
     <div class="app-card" style="border-left:5px solid {reliability_color}; margin-bottom:15px;">
         <div class="card-content">
-            <div style="color:gray; margin:0; font-size:13px; min-height:20px; display:flex; align-items:flex-start;">Prediction Reliability</div>
+            <div style="color:gray; margin:0; font-size:13px; min-height:20px; display:flex; align-items:flex-start; gap:4px;">
+                Prediction Reliability
+                <span title="Reliability considers confidence, complaint detail level, information density, and ambiguity." style="cursor:help; font-size:11px;">ℹ️</span>
+            </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-top:2px;">
                 <p style="color:white; margin:0; font-size:32px; font-weight:bold;">{score_label}</p>
                 <span style="background:{reliability_color}; color:#0f0f1a; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; line-height:1;">{reliability_level}</span>
@@ -761,13 +760,13 @@ def export_priority_queue_csv(pq_df):
 # ------------------------
 # Single Complaint Triage / SaaS Landing Page Helper Functions
 # ------------------------
-CRITICAL_SAMPLE = """My online banking account was accessed yesterday by an unauthorized person who changed my password. They initiated two wire transfers totaling $4,500 to an unknown account. I contacted customer service immediately, but the funds have already left my account. This is my entire savings, and I need immediate assistance to reverse these transactions and secure my account."""
+CRITICAL_SAMPLE = """My online banking account was hacked and multiple unauthorized transfers were made from my savings account. I can no longer access my account and additional transactions are still occurring."""
 
-HIGH_SAMPLE = """I have been disputing an unauthorized charge of $350 on my credit card for the past 3 weeks. The bank keeps closing my dispute without investigation and my credit score has dropped 40 points as a result. I have called 5 times and nobody is helping me resolve this."""
+HIGH_SAMPLE = """I noticed a charge on my credit card that I do not recognize and submitted a dispute last week. I have contacted customer service twice but have not yet received an update on the investigation. I would like the transaction reviewed and the dispute process expedited."""
 
-MEDIUM_SAMPLE = """I was charged a $35 late fee on my credit card invoice dated June 1st. However, I made my payment on May 30th, which is two days before the due date. The transaction history clearly shows the payment was processed on time. I request that this late fee be reversed as it was an error on the bank's side."""
+MEDIUM_SAMPLE = """I was charged a late fee on my credit card statement even though I submitted my payment before the due date. I would like the charge reviewed and corrected."""
 
-LOW_SAMPLE = """Could you please provide information on how I can request paper statements for the past calendar year for my savings account? I am preparing my tax returns and need the physical documents. Please let know if there are any associated fees for printing and mailing these statements."""
+LOW_SAMPLE = """Could you provide information on how I can obtain paper statements for the previous calendar year for my checking account?"""
 
 def render_sample_card(title, color, scenario, preview, category, urgency, sample_id):
     return f"""
@@ -894,6 +893,7 @@ def render_input_section():
                     'text': complaint_text,
                     'category': result.get('category'),
                     'urgency': urgency_level,
+                    'urgency_source': result.get('urgency_source', '🛡 Keyword Fallback'),
                     'department': result.get('department'),
                     'confidence': result.get('confidence'),
                     'sla': result.get('sla', 'Unknown'),
@@ -934,14 +934,25 @@ def render_results():
     with col2:
         st.markdown(styled_card("Department", department, "#9C27B0"), unsafe_allow_html=True)
         
-    col3, col4 = st.columns(2, gap="medium")
+    col3, col4, col5 = st.columns(3, gap="medium")
     with col3:
         st.markdown(urgency_card(urgency_level), unsafe_allow_html=True)
     with col4:
         st.markdown(confidence_card(confidence), unsafe_allow_html=True)
+    with col5:
+        urgency_source = result.get('urgency_source', '🛡 Keyword Fallback')
+        source_color = "#8B5CF6" if "Groq" in urgency_source else "#888888"
+        st.markdown(styled_card("Urgency Source", urgency_source, source_color), unsafe_allow_html=True)
         
     st.markdown(render_risk_card(risk_score), unsafe_allow_html=True)
     st.markdown(render_reliability_card(confidence, st.session_state.sample_text), unsafe_allow_html=True)
+    
+    with st.expander("ℹ️ Understanding Confidence vs. Reliability"):
+        st.markdown(
+            "**Model Confidence** measures how certain the model is about the prediction.\n\n"
+            "**Prediction Reliability** considers confidence, complaint detail level, information density, and ambiguity."
+        )
+
     st.markdown(sla_card(sla, urgency_level), unsafe_allow_html=True)
     st.markdown(escalation_card(urgency_level, confidence, escalation_flag), unsafe_allow_html=True)
     
@@ -1074,7 +1085,7 @@ def render_single_triage():
         st.markdown('---')
         st.subheader('🕘 Triage History')
         hist_df = pd.DataFrame(st.session_state.history)
-        preferred_columns = ['text', 'category', 'urgency', 'risk_score', 'reliability_score', 'reliability_level', 'sla', 'department', 'confidence', 'matched_keywords']
+        preferred_columns = ['text', 'category', 'urgency', 'urgency_source', 'risk_score', 'reliability_score', 'reliability_level', 'sla', 'department', 'confidence', 'matched_keywords']
         history_columns = [column for column in preferred_columns if column in hist_df.columns]
         hist_df = hist_df[history_columns] if history_columns else hist_df
         st.dataframe(hist_df, width="stretch")
@@ -1092,6 +1103,15 @@ def render_batch_processing():
         
         narrative_col = st.selectbox("Select the column containing complaint narratives:", df.columns.tolist())
 
+        batch_size = len(df)
+        use_ai_urgency = False
+        if batch_size <= 50:
+            use_ai_urgency = st.checkbox("Use AI Urgency Prediction (Groq)", value=False)
+        else:
+            st.checkbox("Use AI Urgency Prediction (Groq)", value=False, disabled=True,
+                        help="AI urgency prediction is disabled for large batches to avoid API rate limits and excessive latency.")
+            st.warning("AI urgency prediction is disabled for large batches to avoid API rate limits and excessive latency.")
+
         if st.button("🚀 Process All Complaints", width="stretch", type="primary"):
             with st.spinner(f"Processing {len(df)} complaints..."):
                 results = []
@@ -1103,7 +1123,7 @@ def render_batch_processing():
 
                 for i, text in enumerate(df[narrative_col]):
                     try:
-                        res = analyze_complaint(str(text))
+                        res = analyze_complaint(str(text), use_ai_urgency=use_ai_urgency)
                     except Exception:
                         res = {'category': 'Unknown', 'urgency': 'Low', 'department': 'General Support', 'confidence': 0.0, 'risk': None}
 
@@ -1130,6 +1150,7 @@ def render_batch_processing():
                             'text': str(text),
                             'category': res.get('category'),
                             'urgency': res.get('urgency'),
+                            'urgency_source': res.get('urgency_source', '🛡 Keyword Fallback'),
                             'department': res.get('department'),
                             'confidence': res.get('confidence'),
                             'sla': res.get('sla', 'Unknown'),
@@ -1154,6 +1175,10 @@ def render_batch_processing():
                 df['Reliability Level'] = df['Reliability Score'].apply(get_reliability_level)
                 df['Escalation'] = df.apply(lambda x: 'Yes' if x['Urgency'] == 'Critical' or x['Confidence'] < 0.70 else 'No', axis=1)
                 df['Complaint'] = df[narrative_col]
+                if 'urgency_source' in results_df.columns:
+                    df['Urgency Source'] = results_df['urgency_source']
+                else:
+                    df['Urgency Source'] = '🛡 Keyword Fallback'
 
                 st.session_state.batch_results = df
                 st.toast("Batch Processing Complete!", icon="🎉")
@@ -1200,8 +1225,10 @@ def render_dashboard(df):
     if urg_filter: filtered_df = filtered_df[filtered_df['Urgency'].isin(urg_filter)]
     if dept_filter: filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]
 
-    # Display only the 8 required columns in the batch output table
+    # Display only the required columns in the batch output table
     display_cols = ['Complaint', 'Category', 'Department', 'Urgency', 'Confidence', 'Risk Score', 'SLA', 'Escalation']
+    if 'Urgency Source' in filtered_df.columns:
+        display_cols.append('Urgency Source')
     display_cols = [col for col in display_cols if col in filtered_df.columns]
     render_df = filtered_df[display_cols]
 
@@ -1918,6 +1945,71 @@ def render_about():
             </div>
         </div>
     </div>
+    """, unsafe_allow_html=True)
+    
+    # Section 6.5: Hybrid Urgency Engine
+    st.markdown('<div class="section-title">🧠 Hybrid Urgency Engine</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <p style='color:#aaa; font-size:14.5px; line-height:1.6; margin-bottom:20px;'>
+        Urgency prediction uses a production-style hybrid architecture instead of relying on a single method. This design combines the contextual intelligence of LLMs with the absolute reliability of deterministic keyword heuristics.
+    </p>
+    """, unsafe_allow_html=True)
+    
+    col_eng1, col_eng2 = st.columns(2, gap="medium")
+    with col_eng1:
+        st.markdown("""
+        <div class="app-card" style="border-top: 4px solid #2196F3 !important; height: 100%;">
+            <div class="card-content">
+                <h3 style="color:#2196F3; margin-top:0;">🤖 AI Urgency Engine</h3>
+                <p style="color:#b7bec9; font-size:13.5px; margin-bottom:12px;">Used for Single Complaint Triage.</p>
+                <p style="color:white; font-weight:600; margin-bottom:6px; font-size:14px;">Capabilities:</p>
+                <ul style="padding-left:20px; color:#cbd5e1; margin-top:4px;">
+                    <li style="margin-bottom:4px;">✓ Understands context</li>
+                    <li style="margin-bottom:4px;">✓ Handles nuanced complaint narratives</li>
+                    <li style="margin-bottom:4px;">✓ Interprets intent beyond keywords</li>
+                    <li style="margin-bottom:4px;">✓ Better classification for complex complaints</li>
+                </ul>
+                <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:13px; color:#94a3b8;">
+                    <strong>Technology:</strong> Groq LLM
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col_eng2:
+        st.markdown("""
+        <div class="app-card" style="border-top: 4px solid #4CAF50 !important; height: 100%;">
+            <div class="card-content">
+                <h3 style="color:#4CAF50; margin-top:0;">🛡 Fallback Urgency Engine</h3>
+                <p style="color:#b7bec9; font-size:13.5px; margin-bottom:12px;">Used when AI is unavailable and for large-scale batch processing.</p>
+                <p style="color:white; font-weight:600; margin-bottom:6px; font-size:14px;">Capabilities:</p>
+                <ul style="padding-left:20px; color:#cbd5e1; margin-top:4px;">
+                    <li style="margin-bottom:4px;">✓ Deterministic</li>
+                    <li style="margin-bottom:4px;">✓ Fast execution</li>
+                    <li style="margin-bottom:4px;">✓ No API dependency</li>
+                    <li style="margin-bottom:4px;">✓ Scales to large CSV uploads</li>
+                </ul>
+                <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:13px; color:#94a3b8;">
+                    <strong>Technology:</strong> Rule-Based Keyword Scoring
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    st.write("")
+    
+    col_kpi1, col_kpi2, col_kpi3 = st.columns(3, gap="medium")
+    with col_kpi1:
+        st.markdown(styled_card("⚡ Primary Engine", "Groq AI", "#2196F3"), unsafe_allow_html=True)
+    with col_kpi2:
+        st.markdown(styled_card("🛡 Fallback Engine", "Keyword Rules", "#4CAF50"), unsafe_allow_html=True)
+    with col_kpi3:
+        st.markdown(styled_card("🎯 Architecture Goal", "Reliability + Availability", "#9c27b0"), unsafe_allow_html=True)
+        
+    st.markdown("""
+    <p style='color:#aaa; font-size:14.5px; line-height:1.6; margin-top:15px; margin-bottom:25px;'>
+        This hybrid architecture combines the contextual understanding of LLMs with the reliability of deterministic rules. The system automatically falls back to rule-based urgency scoring during API outages or large-scale batch processing.
+    </p>
     """, unsafe_allow_html=True)
     
     # Section 7: Key Project Decisions

@@ -1,3 +1,26 @@
+import os
+import re
+import requests
+import logging
+
+# Ensure basic logging configuration so that messages are recorded in app.log and stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("urgency")
+
+try:
+    import streamlit as st
+    cache_decorator = st.cache_data(show_spinner=False)
+except Exception:
+    def cache_decorator(func):
+        return func
+
 severity_keywords = {
     "Critical": [
         "identity theft",
@@ -244,5 +267,142 @@ def urgency_level(text, return_details=False):
         }
 
     return severity
+
+
+def get_groq_api_key():
+    """
+    Retrieves the Groq API key from streamlit secrets, environment variables,
+    or manually parses .env and .streamlit/secrets.toml if available.
+    """
+    # 1. Try streamlit secrets
+    try:
+        import streamlit as st
+        if "GROQ_API_KEY" in st.secrets:
+            return st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+    
+    # 2. Try environment variables
+    key = os.environ.get("GROQ_API_KEY")
+    if key:
+        return key
+        
+    # 3. Try to read from .env file manually
+    if os.path.exists(".env"):
+        try:
+            with open(".env", "r") as f:
+                for line in f:
+                    if line.strip() and not line.startswith("#"):
+                        parts = line.strip().split("=", 1)
+                        if len(parts) == 2 and parts[0].strip() == "GROQ_API_KEY":
+                            val = parts[1].strip().strip("'\"")
+                            return val
+        except Exception as e:
+            logger.debug(f"Failed to parse .env file: {e}")
+            
+    # 4. Try to read from .streamlit/secrets.toml manually
+    if os.path.exists(".streamlit/secrets.toml"):
+        try:
+            with open(".streamlit/secrets.toml", "r") as f:
+                for line in f:
+                    if line.strip() and not line.startswith("#"):
+                        parts = line.strip().split("=", 1)
+                        if len(parts) == 2 and parts[0].strip() == "GROQ_API_KEY":
+                            val = parts[1].strip().strip("'\"")
+                            return val
+        except Exception as e:
+            logger.debug(f"Failed to parse secrets.toml: {e}")
+            
+    return None
+
+
+@cache_decorator
+def _call_groq_api(text, api_key):
+    """
+    Calls the Groq API using HTTP POST. Decorated with streamlit cache
+    so successful requests are cached. Raises an exception on API error, timeout,
+    or validation failure (to avoid caching invalid/malformed responses).
+    """
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Using llama-3.3-70b-versatile for high quality and speed on Groq
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a banking complaint triage classifier.\n"
+                    "Classify the complaint urgency.\n"
+                    "Respond with ONLY one word:\n"
+                    "Critical\n"
+                    "High\n"
+                    "Medium\n"
+                    "Low\n"
+                    "No explanation.\n"
+                    "No punctuation.\n"
+                    "No additional text."
+                )
+            },
+            {
+                "role": "user",
+                "content": text
+            }
+        ],
+        "temperature": 0.0,
+        "max_tokens": 10
+    }
+    
+    # 5-second timeout to handle potential API hangs/timeouts
+    response = requests.post(url, headers=headers, json=payload, timeout=5)
+    
+    if response.status_code == 200:
+        res_json = response.json()
+        raw_response = res_json["choices"][0]["message"]["content"]
+        
+        # Clean and validate response here to prevent caching invalid results
+        cleaned_response = raw_response.strip().title()
+        cleaned_response = re.sub(r'[^\w]', '', cleaned_response)
+        
+        VALID_URGENCY = {"Critical", "High", "Medium", "Low"}
+        if cleaned_response in VALID_URGENCY:
+            return cleaned_response
+        else:
+            raise ValueError(f"Invalid urgency level response: '{raw_response}'")
+    else:
+        raise Exception(f"HTTP error {response.status_code}: {response.text}")
+
+
+def predict_urgency_groq(text, return_source=False):
+    """
+    Predicts complaint urgency using Groq API.
+    Falls back to the keyword-based urgency engine (urgency_level) in case of any failures.
+    """
+    api_key = get_groq_api_key()
+    if not api_key:
+        logger.warning("Groq API key is missing. Falling back to keyword urgency.")
+        fallback_val = urgency_level(text)
+        if return_source:
+            return fallback_val, "🛡 Keyword Fallback"
+        return fallback_val
+
+    try:
+        cleaned_response = _call_groq_api(text, api_key)
+        logger.info(f"Groq API success: predicted '{cleaned_response}' urgency.")
+        if return_source:
+            return cleaned_response, "🤖 Groq AI"
+        return cleaned_response
+            
+    except Exception as e:
+        logger.error(f"Groq API call failed: {e}. Falling back to keyword urgency.")
+        fallback_val = urgency_level(text)
+        if return_source:
+            return fallback_val, "🛡 Keyword Fallback"
+        return fallback_val
+
 
 
