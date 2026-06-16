@@ -364,7 +364,7 @@ def metric_card(label, value, color="#4CAF50"):
     return render_kpi_card(label, value, color, centered=True)
 
 def urgency_card(urgency):
-    color_map = {"Critical": "#F44336", "High": "#FF9800", "Medium": "#FFC107", "Low": "#4CAF50"}
+    color_map = {"Critical": "#F44336", "High": "#FF7300", "Medium": "#FFC107", "Low": "#4CAF50"}
     return styled_card("Urgency Level", urgency, color_map.get(urgency, "#888"))
 
 def confidence_card(confidence):
@@ -375,7 +375,7 @@ def confidence_card(confidence):
         return styled_card(label_text, "N/A", "#888", subtitle="Model confidence unavailable.")
 
     pct = max(0.0, min(confidence_value * 100, 100.0))
-    color = "#4CAF50" if pct >= 70 else "#FF9800" if pct >= 50 else "#F44336"
+    color = "#4CAF50" if pct >= 70 else "#FF7300" if pct >= 50 else "#F44336"
     flag = " ⚠️ Low Confidence" if pct < 70 else ""
     return styled_card(label_text, f"{pct:.1f}%", color, flag=flag)
 
@@ -395,7 +395,7 @@ def get_reliability_level(reliability_score):
 def get_reliability_color(reliability_level):
     color_map = {
         "High Reliability": "#4CAF50",
-        "Moderate Reliability": "#FF9800",
+        "Moderate Reliability": "#FF7300",
         "Low Reliability": "#F44336",
         "Unknown Reliability": "#888888"
     }
@@ -522,7 +522,7 @@ def get_risk_level(risk_score):
 def get_risk_color(risk_level):
     color_map = {
         "Critical Risk": "#F44336",
-        "High Risk": "#FF9800",
+        "High Risk": "#FF7300",
         "Medium Risk": "#FFC107",
         "Low Risk": "#4CAF50",
         "Unknown Risk": "#888888"
@@ -631,7 +631,7 @@ def style_risk_score(val):
         if 90 <= val_f <= 100:
             return 'color: #F44336; font-weight: bold;'
         elif 70 <= val_f < 90:
-            return 'color: #FF9800; font-weight: bold;'
+            return 'color: #FF7300; font-weight: bold;'
         elif 40 <= val_f < 70:
             return 'color: #FFC107; font-weight: bold;'
         elif 0 <= val_f < 40:
@@ -681,7 +681,7 @@ def create_risk_distribution_chart(df):
     categories = ['0-39<br>(Low)', '40-69<br>(Medium)', '70-89<br>(High)', '90-100<br>(Critical)']
     counts = [metrics['low_count'], metrics['medium_count'], metrics['high_count'], metrics['critical_count']]
     
-    colors = ['#4CAF50', '#FFC107', '#FF9800', '#F44336']
+    colors = ['#4CAF50', '#FFC107', '#FF7300', '#F44336']
     
     fig = go.Figure(data=[
         go.Bar(
@@ -745,7 +745,7 @@ def render_priority_queue_kpis(pq_df):
     with col2:
         st.markdown(metric_card("Critical Cases", critical_cases, "#F44336"), unsafe_allow_html=True)
     with col3:
-        st.markdown(metric_card("High Cases", high_cases, "#FF9800"), unsafe_allow_html=True)
+        st.markdown(metric_card("High Cases", high_cases, "#FF7300"), unsafe_allow_html=True)
     with col4:
         st.markdown(metric_card("Average Queue Risk", avg_queue_risk, "#E91E63"), unsafe_allow_html=True)
 
@@ -992,7 +992,7 @@ def render_home():
     # Metrics
     col1, col2, col3, col4 = st.columns(4, gap="medium")
     col1.markdown(metric_card("Complaint Categories", "6", "#4CAF50"), unsafe_allow_html=True)
-    col2.markdown(metric_card("Urgency Levels", "4", "#FF9800"), unsafe_allow_html=True)
+    col2.markdown(metric_card("Urgency Levels", "4", "#FF7300"), unsafe_allow_html=True)
     col3.markdown(metric_card("Macro F1 Score", "81%", "#2196F3"), unsafe_allow_html=True)
     col4.markdown(metric_card("Training Data", "3.6M", "#9C27B0"), unsafe_allow_html=True)
 
@@ -1195,7 +1195,7 @@ def render_dashboard(df):
     col1, col2, col3, col4 = st.columns(4)
     col1.markdown(metric_card("Total Complaints", len(df), "#2196F3"), unsafe_allow_html=True)
     col2.markdown(metric_card("Critical Cases", len(df[df['Urgency'] == 'Critical']), "#F44336"), unsafe_allow_html=True)
-    col3.markdown(metric_card("Escalations", len(df[df['Escalation'] == 'Yes']), "#FF9800"), unsafe_allow_html=True)
+    col3.markdown(metric_card("Escalations", len(df[df['Escalation'] == 'Yes']), "#FF7300"), unsafe_allow_html=True)
     col4.markdown(metric_card("Avg Confidence", f"{df['Confidence'].mean()*100:.1f}%", "#4CAF50"), unsafe_allow_html=True)
 
     st.markdown("---")
@@ -1209,7 +1209,7 @@ def render_dashboard(df):
         st.plotly_chart(fig1, width="stretch")
 
     with col2:
-        color_map = {'Critical': '#F44336', 'High': '#FF9800', 'Medium': '#FFC107', 'Low': '#4CAF50'}
+        color_map = {'Critical': '#F44336', 'High': '#FF7300', 'Medium': '#FFC107', 'Low': '#4CAF50'}
         fig2 = px.pie(df, names='Urgency', title='Urgency Distribution', color='Urgency', color_discrete_map=color_map)
         fig2.update_layout(paper_bgcolor='#1e1e2e', plot_bgcolor='#1e1e2e', font_color='white')
         st.plotly_chart(fig2, width="stretch")
@@ -1268,7 +1268,7 @@ def render_dashboard(df):
     with risk_col3:
         st.markdown(metric_card("Critical Risk Cases", batch_metrics['critical_count'], "#F44336"), unsafe_allow_html=True)
     with risk_col4:
-        st.markdown(metric_card("High Risk Cases", batch_metrics['high_count'], "#FF9800"), unsafe_allow_html=True)
+        st.markdown(metric_card("High Risk Cases", batch_metrics['high_count'], "#FF7300"), unsafe_allow_html=True)
         
     # Chart & Summary Layout
     chart_col, summary_col = st.columns([2, 1], gap="large")
@@ -1284,7 +1284,7 @@ def render_dashboard(df):
                 <hr style="border-color:rgba(255,255,255,0.1); margin-bottom:15px;">
                 <p style="font-size:15px; margin:8px 0; color:white;"><strong>Average Risk Score:</strong> {batch_metrics['avg_risk']}</p>
                 <p style="font-size:15px; margin:8px 0; color:#F44336;"><strong>Critical Risk Cases:</strong> {batch_metrics['critical_count']}</p>
-                <p style="font-size:15px; margin:8px 0; color:#FF9800;"><strong>High Risk Cases:</strong> {batch_metrics['high_count']}</p>
+                <p style="font-size:15px; margin:8px 0; color:#FF7300; font-weight:bold;"><strong>High Risk Cases:</strong> {batch_metrics['high_count']}</p>
                 <p style="font-size:15px; margin:8px 0; color:#FFC107;"><strong>Medium Risk Cases:</strong> {batch_metrics['medium_count']}</p>
                 <p style="font-size:15px; margin:8px 0; color:#4CAF50;"><strong>Low Risk Cases:</strong> {batch_metrics['low_count']}</p>
             </div>
@@ -2077,28 +2077,10 @@ def render_about():
     <div class="limitations-grid">
         <div class="app-card limit-card">
             <div class="card-content">
-                <div class="limit-title">🔍 Short Complaints Lack Context</div>
-                <div class="limit-desc">
-                    Complaints containing fewer than 6-12 words (e.g., "card not working") do not carry enough semantic information. 
-                    This leads to lower model confidence and flags the case as low reliability.
-                </div>
-            </div>
-        </div>
-        <div class="app-card limit-card">
-            <div class="card-content">
                 <div class="limit-title">🌐 Semantic Category Overlap</div>
                 <div class="limit-desc">
                     Product domains can bleed into each other. A complaint about a "mortgage payment debited from credit card" 
                     creates classifier ambiguity between Loans, Cards & Transactions, and Accounts.
-                </div>
-            </div>
-        </div>
-        <div class="app-card limit-card">
-            <div class="card-content">
-                <div class="limit-title">⚙️ Keyword-Based Urgency Bias</div>
-                <div class="limit-desc">
-                    Urgency levels depend heavily on strict dictionary matching of key phrases. 
-                    Sarcasm, misspelt terms, or atypical phrasing can sometimes bypass critical urgency flags.
                 </div>
             </div>
         </div>
