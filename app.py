@@ -2148,4 +2148,3 @@ elif st.session_state.page == "📊 Batch Processing":
 elif st.session_state.page == "ℹ️ About":
     render_about()
 
-# st.markdown("<div class='footer'>Educational Machine Learning Project · NLP + Classification + Priority Prediction</div>", unsafe_allow_html=True)
