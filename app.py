@@ -1268,7 +1268,7 @@ def render_dashboard(df):
     with risk_col3:
         st.markdown(metric_card("Critical Risk Cases", batch_metrics['critical_count'], "#F44336"), unsafe_allow_html=True)
     with risk_col4:
-        st.markdown(metric_card("High Risk Cases", batch_metrics['high_count'], "#FF7300"), unsafe_allow_html=True)
+        st.markdown(metric_card("High Risk Cases", batch_metrics['high_count'], "#  "), unsafe_allow_html=True)
         
     # Chart & Summary Layout
     chart_col, summary_col = st.columns([2, 1], gap="large")
@@ -2148,4 +2148,4 @@ elif st.session_state.page == "📊 Batch Processing":
 elif st.session_state.page == "ℹ️ About":
     render_about()
 
-st.markdown("<div class='footer'>Educational Machine Learning Project · NLP + Classification + Priority Prediction</div>", unsafe_allow_html=True)
+# st.markdown("<div class='footer'>Educational Machine Learning Project · NLP + Classification + Priority Prediction</div>", unsafe_allow_html=True)
