@@ -229,7 +229,8 @@ def urgency_level(text, return_details=False):
 
     for level, keywords in severity_keywords.items():
         for keyword in keywords:
-            if keyword in text:
+            pattern = r'\b' + re.escape(keyword) + r'\b'
+            if re.search(pattern, text):
                 scores[level] += severity_weights[level]
                 matched_keywords.append(keyword)
 
