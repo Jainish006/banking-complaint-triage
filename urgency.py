@@ -319,64 +319,69 @@ def get_groq_api_key():
 
 @cache_decorator
 def _call_groq_api(text, api_key):
-    """
-    Calls the Groq API using HTTP POST. Decorated with streamlit cache
-    so successful requests are cached. Raises an exception on API error, timeout,
-    or validation failure (to avoid caching invalid/malformed responses).
-    """
+    import json # Imported here to ensure it's available
+    
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     
-    # Using llama-3.3-70b-versatile for high quality and speed on Groq
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "messages": [
             {
                 "role": "system",
-                "content": (
-                    "You are a banking complaint triage classifier.\n"
-                    "Classify the complaint urgency.\n"
-                    "Respond with ONLY one word:\n"
-                    "Critical\n"
-                    "High\n"
-                    "Medium\n"
-                    "Low\n"
-                    "No explanation.\n"
-                    "No punctuation.\n"
-                    "No additional text."
-                )
+                "content": "You are a banking complaint triage classifier. Extract the urgency level from the user's complaint."
             },
             {
                 "role": "user",
-                "content": text
+                "content": str(text).strip() or "No complaint provided."
             }
         ],
         "temperature": 0.0,
-        "max_tokens": 10
+        "max_completion_tokens": 2048, # Updated from the deprecated max_tokens
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "urgency_classification",
+                "strict": True, # Enforces strict schema compliance
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "urgency": {
+                            "type": "string",
+                            "enum": ["Critical", "High", "Medium", "Low"]
+                        }
+                    },
+                    "required": ["urgency"],
+                    "additionalProperties": False
+                }
+            }
+        }
     }
     
-    # 5-second timeout to handle potential API hangs/timeouts
-    response = requests.post(url, headers=headers, json=payload, timeout=5)
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
     
     if response.status_code == 200:
         res_json = response.json()
         raw_response = res_json["choices"][0]["message"]["content"]
         
-        # Clean and validate response here to prevent caching invalid results
-        cleaned_response = raw_response.strip().title()
-        cleaned_response = re.sub(r'[^\w]', '', cleaned_response)
-        
+        try:
+            # Parse the guaranteed JSON output
+            parsed_data = json.loads(raw_response)
+            cleaned_response = parsed_data.get("urgency", "").strip()
+        except Exception:
+            cleaned_response = ""
+            
         VALID_URGENCY = {"Critical", "High", "Medium", "Low"}
+        
         if cleaned_response in VALID_URGENCY:
             return cleaned_response
         else:
             raise ValueError(f"Invalid urgency level response: '{raw_response}'")
     else:
         raise Exception(f"HTTP error {response.status_code}: {response.text}")
-
 
 def predict_urgency_groq(text, return_source=False):
     """

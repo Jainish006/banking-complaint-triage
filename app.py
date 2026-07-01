@@ -7,11 +7,13 @@ import re
 import time
 import random
 
-# Attempt to import the real predictor, otherwise use a mock for testing
-try:
+import importlib.util
+
+# Import the real predictor if available, otherwise define a mock for testing
+if importlib.util.find_spec("predictor") is not None:
     from predictor import analyze_complaint
-except ImportError as e:
-    st.error(f"Failed to load ML models: {e}")
+else:
+    st.error("Failed to load ML models: predictor module not found")
     def analyze_complaint(text, **kwargs):
         """Mock predictor for demonstration purposes."""
         time.sleep(0.5)  # Simulate API/Model latency
@@ -24,6 +26,14 @@ except ImportError as e:
             'department': random.choice(departments),
             'confidence': random.uniform(0.4, 0.99)
         }
+
+# Import routing helper at top level if available
+if importlib.util.find_spec("routing") is not None:
+    from routing import get_risk_score
+else:
+    def get_risk_score(urgency_val, confidence_val):
+        base = {'Low': 15, 'Medium': 40, 'High': 75, 'Critical': 100}.get(urgency_val, 15)
+        return round(base * 0.7 + (confidence_val * 100) * 0.3)
 
 # ------------------------
 # Page Config
@@ -60,68 +70,38 @@ if 'analysis_result' not in st.session_state:
     st.session_state.analysis_result = None
 
 # Check query parameters for page routing or sample population
-try:
-    query_params = st.query_params
-    if query_params:
-        if "page" in query_params:
-            page_val = query_params["page"]
-            if page_val == "Single_Triage":
-                st.session_state.page = "🔍 Single Triage"
-            elif page_val == "Batch_Processing":
-                st.session_state.page = "📊 Batch Processing"
-            elif page_val == "About":
-                st.session_state.page = "ℹ️ About"
-            elif page_val == "Home":
-                st.session_state.page = "🏠 Home"
-                
-        if "sample" in query_params:
-            sample_val = query_params["sample"]
-            if sample_val == "critical":
-                st.session_state.sample_text = CRITICAL_SAMPLE
-                st.session_state.analysis_result = None
-            elif sample_val == "high":
-                st.session_state.sample_text = HIGH_SAMPLE
-                st.session_state.analysis_result = None
-            elif sample_val == "medium":
-                st.session_state.sample_text = MEDIUM_SAMPLE
-                st.session_state.analysis_result = None
-            elif sample_val == "low":
-                st.session_state.sample_text = LOW_SAMPLE
-                st.session_state.analysis_result = None
-                
-        st.query_params.clear()
-except AttributeError:
-    try:
-        query_params = st.experimental_get_query_params()
-        if query_params:
-            if "page" in query_params:
-                page_val = query_params["page"][0]
-                if page_val == "Single_Triage":
-                    st.session_state.page = "🔍 Single Triage"
-                elif page_val == "Batch_Processing":
-                    st.session_state.page = "📊 Batch Processing"
-                elif page_val == "About":
-                    st.session_state.page = "ℹ️ About"
-                elif page_val == "Home":
-                    st.session_state.page = "🏠 Home"
-                    
-            if "sample" in query_params:
-                sample_val = query_params["sample"][0]
-                if sample_val == "critical":
-                    st.session_state.sample_text = CRITICAL_SAMPLE
-                    st.session_state.analysis_result = None
-                elif sample_val == "high":
-                    st.session_state.sample_text = HIGH_SAMPLE
-                    st.session_state.analysis_result = None
-                elif sample_val == "medium":
-                    st.session_state.sample_text = MEDIUM_SAMPLE
-                    st.session_state.analysis_result = None
-                elif sample_val == "low":
-                    st.session_state.sample_text = LOW_SAMPLE
-                    st.session_state.analysis_result = None
-            st.experimental_set_query_params()
-    except Exception:
-        pass
+def _apply_query_params(query_params, is_new_api):
+    if not query_params:
+        return
+    if "page" in query_params:
+        page_val = query_params["page"] if is_new_api else query_params["page"][0]
+        page_map = {
+            "Single_Triage": "🔍 Single Triage",
+            "Batch_Processing": "📊 Batch Processing",
+            "About": "ℹ️ About",
+            "Home": "🏠 Home"
+        }
+        if page_val in page_map:
+            st.session_state.page = page_map[page_val]
+    if "sample" in query_params:
+        sample_val = query_params["sample"] if is_new_api else query_params["sample"][0]
+        sample_map = {
+            "critical": CRITICAL_SAMPLE,
+            "high": HIGH_SAMPLE,
+            "medium": MEDIUM_SAMPLE,
+            "low": LOW_SAMPLE
+        }
+        if sample_val in sample_map:
+            st.session_state.sample_text = sample_map[sample_val]
+            st.session_state.analysis_result = None
+
+if hasattr(st, "query_params"):
+    _apply_query_params(st.query_params, is_new_api=True)
+    st.query_params.clear()
+elif hasattr(st, "experimental_get_query_params"):
+    _apply_query_params(st.experimental_get_query_params(), is_new_api=False)
+    if hasattr(st, "experimental_set_query_params"):
+        st.experimental_set_query_params()
 
 st.markdown("""
 <style>
@@ -497,15 +477,20 @@ def render_reliability_card(confidence, complaint_text):
     """
 
 def safe_float(value):
-    try:
-        if value is None:
-            return None
-        numeric_value = float(value)
-        if pd.isna(numeric_value):
-            return None
-        return numeric_value
-    except (TypeError, ValueError):
+    if value is None:
         return None
+    if isinstance(value, (int, float)):
+        return None if pd.isna(value) else float(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if re.match(r'^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$', stripped):
+            return float(stripped)
+        return None
+    # Handle numpy scalars and similar objects with .item()
+    if hasattr(value, 'item'):
+        numeric_value = float(value.item())
+        return None if pd.isna(numeric_value) else numeric_value
+    return None
 
 def get_risk_level(risk_score):
     score = normalize_risk_score(risk_score)
@@ -626,8 +611,8 @@ def highlight_keywords(text, keywords):
 # Batch Processing Helper Functions
 # ------------------------
 def style_risk_score(val):
-    try:
-        val_f = float(val)
+    val_f = safe_float(val)
+    if val_f is not None:
         if 90 <= val_f <= 100:
             return 'color: #F44336; font-weight: bold;'
         elif 70 <= val_f < 90:
@@ -636,8 +621,6 @@ def style_risk_score(val):
             return 'color: #FFC107; font-weight: bold;'
         elif 0 <= val_f < 40:
             return 'color: #4CAF50; font-weight: bold;'
-    except:
-        pass
     return ''
 
 def calculate_batch_risk_metrics(df):
@@ -875,38 +858,31 @@ def render_input_section():
             return
             
         with st.spinner("Analyzing complaint..."):
-            try:
-                from predictor import analyze_complaint as run_analyze
-                result = run_analyze(complaint_text, return_details=True)
-            except Exception:
-                result = analyze_complaint(complaint_text, return_details=True)
+            result = analyze_complaint(complaint_text, return_details=True)
                 
             st.session_state.analysis_result = result
             
             # Save to history
-            try:
-                urgency_level = result.get("urgency_level", result.get("urgency", "Unknown"))
-                matched_keywords = result.get("matched_keywords", []) or []
-                risk_score = result.get("risk_score", result.get("risk"))
-                reliability_score, reliability_word_count = calculate_reliability_score(result.get('confidence'), complaint_text)
-                
-                st.session_state.history.append({
-                    'text': complaint_text,
-                    'category': result.get('category'),
-                    'urgency': urgency_level,
-                    'urgency_source': result.get('urgency_source', '🛡 Keyword Fallback'),
-                    'department': result.get('department'),
-                    'confidence': result.get('confidence'),
-                    'sla': result.get('sla', 'Unknown'),
-                    'risk_score': risk_score,
-                    'reliability_score': reliability_score,
-                    'reliability_level': get_reliability_level(reliability_score),
-                    'reliability_words': reliability_word_count,
-                    'escalation_flag': result.get('escalation_flag'),
-                    'matched_keywords': ", ".join(matched_keywords)
-                })
-            except Exception:
-                pass
+            urgency_level = result.get("urgency_level", result.get("urgency", "Unknown"))
+            matched_keywords = result.get("matched_keywords", []) or []
+            risk_score = result.get("risk_score", result.get("risk"))
+            reliability_score, reliability_word_count = calculate_reliability_score(result.get('confidence'), complaint_text)
+            
+            st.session_state.history.append({
+                'text': complaint_text,
+                'category': result.get('category'),
+                'urgency': urgency_level,
+                'urgency_source': result.get('urgency_source', '🛡 Keyword Fallback'),
+                'department': result.get('department'),
+                'confidence': result.get('confidence'),
+                'sla': result.get('sla', 'Unknown'),
+                'risk_score': risk_score,
+                'reliability_score': reliability_score,
+                'reliability_level': get_reliability_level(reliability_score),
+                'reliability_words': reliability_word_count,
+                'escalation_flag': result.get('escalation_flag'),
+                'matched_keywords': ", ".join(str(k) for k in matched_keywords)
+            })
                 
             st.toast("Analysis Complete!", icon="✅")
             st.rerun()
@@ -1123,22 +1099,14 @@ def render_batch_processing():
                 update_interval = max(1, total_rows // 20) # Update UI max 20 times to prevent freezing
 
                 for i, text in enumerate(df[narrative_col]):
-                    try:
-                        res = analyze_complaint(str(text), use_ai_urgency=use_ai_urgency)
-                    except Exception:
-                        res = {'category': 'Unknown', 'urgency': 'Low', 'department': 'General Support', 'confidence': 0.0, 'risk': None}
+                    res = analyze_complaint(str(text), use_ai_urgency=use_ai_urgency)
 
                     # Calculate risk score using the existing logic from routing.py
                     risk_score = res.get('risk') or res.get('risk_score')
                     if risk_score is None:
                         urgency_val = res.get('urgency', 'Low')
                         confidence_val = res.get('confidence', 0.0)
-                        try:
-                            from routing import get_risk_score
-                            risk_score = get_risk_score(urgency_val, confidence_val)
-                        except ImportError:
-                            base = 15 if urgency_val == 'Low' else 40 if urgency_val == 'Medium' else 75 if urgency_val == 'High' else 100
-                            risk_score = round(base * 0.7 + (confidence_val * 100) * 0.3)
+                        risk_score = get_risk_score(urgency_val, confidence_val)
                     
                     res['risk_score_integrated'] = risk_score
                     results.append(res)
@@ -1146,21 +1114,18 @@ def render_batch_processing():
                     reliability_score, _ = calculate_reliability_score(res.get('confidence'), str(text))
 
                     # Append to session history (frontend-only)
-                    try:
-                        st.session_state.history.append({
-                            'text': str(text),
-                            'category': res.get('category'),
-                            'urgency': res.get('urgency'),
-                            'urgency_source': res.get('urgency_source', '🛡 Keyword Fallback'),
-                            'department': res.get('department'),
-                            'confidence': res.get('confidence'),
-                            'sla': res.get('sla', 'Unknown'),
-                            'risk_score': risk_score,
-                            'reliability_score': reliability_score,
-                            'reliability_level': get_reliability_level(reliability_score)
-                        })
-                    except Exception:
-                        pass
+                    st.session_state.history.append({
+                        'text': str(text),
+                        'category': res.get('category'),
+                        'urgency': res.get('urgency'),
+                        'urgency_source': res.get('urgency_source', '🛡 Keyword Fallback'),
+                        'department': res.get('department'),
+                        'confidence': res.get('confidence'),
+                        'sla': res.get('sla', 'Unknown'),
+                        'risk_score': risk_score,
+                        'reliability_score': reliability_score,
+                        'reliability_level': get_reliability_level(reliability_score)
+                    })
 
                     if i % update_interval == 0 or i == total_rows - 1:
                         progress_bar.progress((i + 1) / total_rows)
